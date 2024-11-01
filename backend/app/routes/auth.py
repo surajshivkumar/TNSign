@@ -3,6 +3,10 @@ from app.schemas.auth_schemas import OTPRequest, OTPValidation
 from app.services.otp_service import send_otp_to_email,validate_otp
 from app.services.tnid_service import is_existing_tnid_user_email,is_existing_tnid_user_phone
 from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, HTTPException
+from app.services.connections_service import fetch_b2b_connections,fetch_b2c_connections
+from typing import List
+import httpx
 #from fastapi.responses import RedirectResponse
 
 router = APIRouter()
@@ -57,3 +61,21 @@ async def validate_otp_route(data: OTPValidation):
             return {"message": "Phone OTP validated successfully."}
         else:
             raise HTTPException(status_code=400, detail="Invalid OTP for phone.")
+
+@router.post("/b2bConnections")
+def get_b2b_connections_route():
+    try:
+        return fetch_b2b_connections()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail="Failed to fetch B2B connections")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/b2CConnections")
+def get_b2c_connections_route():
+    try:
+        return fetch_b2c_connections()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail="Failed to fetch B2C connections")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
