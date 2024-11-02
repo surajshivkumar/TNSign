@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import router  # Import the router that handles your routes
+from app.routes.auth import router  # Import the router that handles your routes
 
 # Initialize the FastAPI app
 app = FastAPI()
@@ -10,7 +10,8 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3001"
+        "http://localhost:3000",
+        "http://localhost:3001",
     ],  # You can restrict this to your frontend URL in production
     allow_credentials=True,
     allow_methods=["*"],
