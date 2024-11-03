@@ -217,9 +217,10 @@ def revoke_connection(request_id: str, entity_type: str) -> str:
     Returns:
         str: Success message or error message.
     """
-    mutation = """
-    mutation RevokeB2bConnectionRequest($requestId: ID!) {
-        revokeB2bConnectionRequest(requestId: $requestId) {
+    mutation = (
+        """
+    mutation RevokeConnectionRequest($requestId: ID!) {
+        revokeConnectionRequest(requestId: $requestId) {
             id
         }
     }
