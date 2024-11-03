@@ -2,7 +2,8 @@ from fastapi import HTTPException
 import requests
 from app.config import TNID_API_SEARCH_URL, TNID_API_BEARER_TOKEN
 
-async def search_users_and_companies(name: str) -> dict:
+
+def search_users_and_companies(name: str) -> dict:
     """
     Search for users and companies based on a name.
     
