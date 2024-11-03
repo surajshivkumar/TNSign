@@ -140,27 +140,6 @@ async def search_with_status_route(name: str):
         raise HTTPException(status_code=500, detail="An unexpected error occurred")
 
 
-@router.post("/b2b/send-connection/{company_id}")
-async def send_connection_route(
-    company_id: str, connection_type: ConnectionType = "PARTNER"
-):
-    """
-    Endpoint to send a B2B connection request.
-
-    Args:
-        company_id (str): The ID of the company to connect with.
-
-    Returns:
-        dict: Message about the connection request status.
-    """
-    print(company_id)
-    try:
-        # statuses =get_companies_with_status(name)
-        result = send_connection(company_id, connection_type)
-        return {"Connection sent with request ID": result}
-    except HTTPException as e:
-        raise e
-
 
 @router.post("/b2b/revoke-connection/{request_id}")
 async def revoke_connection_route(request_id: str):
@@ -179,4 +158,27 @@ async def revoke_connection_route(request_id: str):
     except HTTPException as e:
         raise e
 
-    
+@router.post("/send-connection/{entity_id}")
+async def send_connection_route(
+    entity_id: str,
+    connection_type: ConnectionType,
+    entity_type: str = Query(..., description="Specify 'company' for B2B or 'user' for B2C")
+):
+    """
+    Endpoint to send a connection request to a company or user.
+
+    Args:
+        entity_id (str): The ID of the company or user to connect with.
+        connection_type (ConnectionType): The type of connection to create.
+        entity_type (str): Specify whether the connection is for a 'company' (B2B) or 'user' (B2C).
+
+    Returns:
+        dict: Message about the connection request status.
+    """
+    try:
+        result = send_connection(entity_id, connection_type, entity_type)
+        return {"message": "Connection request sent successfully.", "connection_id": result}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while sending the connection request")
