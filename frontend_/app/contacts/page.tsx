@@ -152,6 +152,7 @@ export default function Contacts() {
           },
         });
         const data: Connection[] = await response.json();
+        console.log(data);
         setConnections(data);
       } catch (error) {
         console.error("Failed to fetch connections:", error);
@@ -303,8 +304,23 @@ export default function Contacts() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Building2 className="h-5 w-5" />
-                        {connection.company.brandName}
+                        {connection.company.legalName}
+                        <button
+                          className={`
+                        ml-4 px-3 py-1.5 
+                        text-white font-semibold text-sm 
+                        rounded-full shadow-md 
+                        transition duration-300 ease-in-out 
+                        transform hover:scale-105
+                        focus:outline-none focus:ring-2 focus:ring-opacity-50
+                        bg-red-500
+                      `}
+                          onClick={() => handleStatusChange(company.id)}
+                        >
+                          {"Revoke"}
+                        </button>
                       </CardTitle>
+
                       <CardDescription>
                         {connection.company.aboutUs}
                       </CardDescription>
@@ -362,6 +378,20 @@ export default function Contacts() {
                         <User className="h-5 w-5" />
                         {connection.connectedUser.firstName}{" "}
                         {connection.connectedUser.lastName}
+                        <button
+                          className={`
+                        ml-4 px-3 py-1.5 
+                        text-white font-semibold text-sm 
+                        rounded-full shadow-md 
+                        transition duration-300 ease-in-out 
+                        transform hover:scale-105
+                        focus:outline-none focus:ring-2 focus:ring-opacity-50
+                        bg-red-500
+                      `}
+                          onClick={() => handleStatusChange(company.id)}
+                        >
+                          {"Revoke"}
+                        </button>
                       </CardTitle>
                       <CardDescription>
                         {connection.connectedUser.username}
