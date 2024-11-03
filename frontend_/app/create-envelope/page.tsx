@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ArrowLeft, Plus, Trash, Upload } from "lucide-react";
 import Link from "next/link";
-
+import { debounce } from "lodash";
 import { Button } from "../components/ui-create-envelope/button";
 import {
   Card,
@@ -17,6 +17,8 @@ import { Label } from "../components/ui-create-envelope/label";
 import { Textarea } from "../components/ui-create-envelope/textarea";
 
 export default function CreateEnvelope() {
+  const [searchResults, setSearchResults] = useState({});
+  const [loading, setLoading] = useState(false);
   const [signers, setSigners] = useState([{ name: "", email: "" }]);
   const [documents, setDocuments] = useState([]);
 
@@ -46,6 +48,67 @@ export default function CreateEnvelope() {
     newDocuments.splice(index, 1);
     setDocuments(newDocuments);
   };
+  const handleInputChange = (index, field, value) => {
+    updateSigner(index, field, value);
+
+    if (value.length >= 2) {
+      // Only trigger autocomplete after 2 characters
+      debouncedFetch(index, field, value);
+    } else {
+      setSearchResults((prev) => ({
+        ...prev,
+        [index]: [], // Clear results if input is too short
+      }));
+    }
+  };
+  const fetchAutocompleteResults = async (query) => {
+    try {
+      const response = await fetch("http://localhost:8000/b2CConnections", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.token}`,
+        },
+      });
+      const data = await response.json();
+
+      const result = data
+        .map((item) => {
+          const name = item.connectedUser
+            ? `${item.connectedUser.firstName} ${item.connectedUser.lastName}`
+            : item.company.brandName;
+
+          const id = item.connectedUser
+            ? item.connectedUser.id
+            : item.company.id;
+
+          return {
+            name,
+            id,
+          };
+        })
+        .filter((item) =>
+          item.name.toLowerCase().includes(query.toLowerCase())
+        );
+      // console.log(result);
+      return result; // Adjust this to access actual suggestions if nested
+    } catch (error) {
+      console.error("Error fetching autocomplete results:", error);
+      return [];
+    }
+  };
+  const debouncedFetch = useCallback(
+    debounce(async (index, field, value) => {
+      // setLoading(true);
+      const results = await fetchAutocompleteResults(value);
+      setSearchResults((prev) => ({
+        ...prev,
+        [index]: results,
+      }));
+      setLoading(false);
+    }, 300),
+    [] // Dependencies - empty here because we don't need to recreate the function
+  );
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
@@ -99,32 +162,67 @@ export default function CreateEnvelope() {
           </CardHeader>
           <CardContent>
             {signers.map((signer, index) => (
-              <div key={index} className="flex gap-4 mb-4">
-                <Input
-                  placeholder="Name"
-                  value={signer.name}
-                  onChange={(e) => updateSigner(index, "name", e.target.value)}
-                  className="bg-gray-700 text-gray-100 border-gray-600"
-                />
-                <Input
-                  placeholder="Email"
-                  type="email"
-                  value={signer.email}
-                  onChange={(e) => updateSigner(index, "email", e.target.value)}
-                  className="bg-gray-700 text-gray-100 border-gray-600"
-                />
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  onClick={() => removeSigner(index)}
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
+              <div key={index} className="flex gap-4 mb-4 relative">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Name"
+                    value={signer.name}
+                    onChange={(e) =>
+                      handleInputChange(index, "name", e.target.value)
+                    }
+                    className="bg-gray-700 text-gray-100 border-gray-600"
+                  />
+                  {loading && <div>Loading...</div>}
+                  {searchResults[index] && searchResults[index].length > 0 && (
+                    <div className="absolute top-full left-0 w-full bg-gray-800 border border-gray-600 rounded mt-1">
+                      {searchResults[index].map((result, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => {
+                            updateSigner(index, "name", result.name);
+                            updateSigner(index, "email", result.id);
+                            setSearchResults((prev) => ({
+                              ...prev,
+                              [index]: [],
+                            }));
+                          }}
+                          className="p-6 cursor-pointer hover:bg-gray-700 text-white"
+                        >
+                          {result.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <Input
+                    placeholder="Email"
+                    type="email"
+                    value={signer.email}
+                    onChange={(e) =>
+                      handleInputChange(index, "email", e.target.value)
+                    }
+                    className="bg-gray-700 text-gray-100 border-gray-600"
+                  />
+                  {loading && <div>Loading...</div>}
+                  {searchResults[index] && (
+                    <div className="absolute top-full left-0 w-full bg-gray-800 border border-gray-600 rounded mt-1">
+                      {searchResults[index].map((result, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() =>
+                            updateSigner(index, "email", result.email)
+                          }
+                          className="p-2 cursor-pointer hover:bg-gray-700"
+                        >
+                          {result.email}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
-            <Button onClick={addSigner} className="mt-2">
-              <Plus className="mr-2 h-4 w-4" /> Add Signer
-            </Button>
           </CardContent>
         </Card>
         <Card className="bg-gray-800 border-gray-700 mb-6">
