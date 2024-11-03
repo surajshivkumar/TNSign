@@ -1,7 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from app.schemas.auth_schemas import OTPRequest, OTPValidation
-from app.services.otp_service import send_otp_to_email,validate_otp
-from app.services.tnid_service import is_existing_tnid_user_email,is_existing_tnid_user_phone
+from app.services.otp_service import send_otp_to_email, validate_otp
+from app.services.tnid_service import (
+    is_existing_tnid_user_email,
+    is_existing_tnid_user_phone,
+)
 from app.services.search_service import search_users_and_companies
 from app.services.send_b2b_connections import get_companies_with_status,send_connection,revoke_connection,ConnectionType
 from fastapi.responses import HTMLResponse
@@ -97,7 +100,8 @@ def get_b2c_connections_route():
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @router.post("/search")
 def search_entities(name:str):
     try:

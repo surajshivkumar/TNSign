@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { debounce } from "lodash";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   User,
@@ -79,9 +81,67 @@ interface Connection {
 
 export default function Contacts() {
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [searchResults, setSearchResults] = useState<string[]>([]);
+  const [query, setQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter(); // Next.js router for navigation
+
+  const fetchAutocompleteResults = async (query: string) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8000/search?name=${query}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      const companyNames = data.companies.map(
+        (company: Company) => company.brandName
+      );
+      const userNames = data.users.map((user: ConnectedUser) => {
+        const firstName = user.firstName || "";
+        const lastName = user.lastName || "";
+        return `${firstName} ${lastName}`.trim();
+      });
+      return [...companyNames, ...userNames];
+    } catch (error) {
+      console.error("Error fetching autocomplete results:", error);
+      return [];
+    }
+  };
+
+  const handleInputChange = (value: string) => {
+    setQuery(value);
+    if (value.length >= 2) {
+      debouncedFetch(value);
+    } else {
+      setSearchResults([]); // Clear results if input is too short
+    }
+  };
+
+  const debouncedFetch = useCallback(
+    debounce(async (value: string) => {
+      setIsLoading(true);
+      const results = await fetchAutocompleteResults(value);
+      setSearchResults(results);
+      setIsLoading(false);
+    }, 300),
+    []
+  );
+
+  const handleResultSelect = (result: string) => {
+    setQuery(result); // Set selected result in the input field
+    setSearchResults([]); // Clear dropdown
+    router.push(`/search?query=${encodeURIComponent(result)}`); // Navigate to the new route
+  };
 
   useEffect(() => {
-    // Fetch data from the API
     const fetchConnections = async () => {
       try {
         const response = await fetch("http://localhost:8000/b2CConnections", {
@@ -91,17 +151,12 @@ export default function Contacts() {
             Authorization: `Bearer ${process.env.token}`,
           },
         });
-        // const response = await fetch("http://localhost:8000/b2CConnections");
-        // if (!response.ok) {
-        //   throw new Error(`Error: ${response.statusText}`);
-        // }
         const data: Connection[] = await response.json();
         setConnections(data);
       } catch (error) {
         console.error("Failed to fetch connections:", error);
       }
     };
-
     fetchConnections();
   }, []);
 
@@ -161,11 +216,29 @@ export default function Contacts() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex items-center justify-between p-4 bg-gray-800">
-          <Input
-            className="w-64 bg-gray-700 text-gray-100 placeholder-gray-400 border-gray-600"
-            placeholder="Search documents..."
-          />
+        <header className="relative flex items-center justify-between p-4 bg-gray-800">
+          <div className="relative w-64">
+            <Input
+              value={query}
+              onChange={(e) => handleInputChange(e.target.value)}
+              className="bg-gray-700 text-gray-100 placeholder-gray-400 border-gray-600 w-full"
+              placeholder="Search ..."
+            />
+            {isLoading && <p className="text-gray-400">Loading...</p>}
+            {searchResults.length > 0 && (
+              <ul className="absolute top-full mt-2 left-0 w-full bg-gray-800 text-white rounded shadow-lg z-10">
+                {searchResults.map((result, index) => (
+                  <li
+                    key={index}
+                    className="p-2 border-b border-gray-600 cursor-pointer hover:bg-gray-700"
+                    onClick={() => handleResultSelect(result)}
+                  >
+                    {result}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <div className="flex items-center space-x-4">
             <Button variant="ghost" size="icon">
               <Bell className="h-5 w-5" />
@@ -213,8 +286,8 @@ export default function Contacts() {
           </div>
         </header>
 
+        {/* Rest of the component */}
         <div className="max-w-7xl mx-5 mt-3">
-          {/* <h1 className="text-3xl font-bold mb-6">Contacts</h1> */}
           <Tabs defaultValue="b2b" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="b2b">B2B Connections</TabsTrigger>
