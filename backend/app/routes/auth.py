@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from app.schemas.auth_schemas import OTPRequest, OTPValidation
 from app.services.otp_service import send_otp_to_email,validate_otp
 from app.services.tnid_service import is_existing_tnid_user_email,is_existing_tnid_user_phone
+from app.services.search_service import search_users_and_companies
 from fastapi.responses import HTMLResponse
 from fastapi import APIRouter, HTTPException
 from app.services.connections_service import fetch_b2b_connections,fetch_b2c_connections
@@ -79,3 +80,13 @@ def get_b2c_connections_route():
         raise HTTPException(status_code=e.response.status_code, detail="Failed to fetch B2C connections")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/search")
+async def search_entities(name:str):
+    try:
+        result = await search_users_and_companies(name)
+        return result
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An unexpected error occurred")
