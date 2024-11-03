@@ -141,19 +141,20 @@ async def search_with_status_route(name: str):
 
 
 
-@router.post("/b2b/revoke-connection/{request_id}")
-async def revoke_connection_route(request_id: str):
+@router.post("/revoke-connection/{request_id}")
+async def revoke_connection_route(request_id: str,entity_type: str = Query(..., description="Specify 'company' for B2B or 'user' for B2C")):
     """
     Endpoint to revoke a B2B connection.
 
     Args:
-        company_id (str): The ID of the company to disconnect from.
+        request_id (str): The ID of the connection request
+        entity_type (str): Specify whether the connection is for a 'company' (B2B) or 'user' (B2C).
 
     Returns:
         dict: Message about the revocation status.
     """
     try:
-        result = revoke_connection(request_id)
+        result = revoke_connection(request_id,entity_type)
         return {"message": result}
     except HTTPException as e:
         raise e
