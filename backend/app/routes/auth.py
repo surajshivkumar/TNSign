@@ -141,7 +141,9 @@ async def search_with_status_route(name: str):
 
 
 @router.post("/b2b/send-connection/{company_id}")
-async def send_connection_route(company_id: str, connection_type: ConnectionType):
+async def send_connection_route(
+    company_id: str, connection_type: ConnectionType = "PARTNER"
+):
     """
     Endpoint to send a B2B connection request.
 
@@ -151,6 +153,7 @@ async def send_connection_route(company_id: str, connection_type: ConnectionType
     Returns:
         dict: Message about the connection request status.
     """
+    print(company_id)
     try:
         # statuses =get_companies_with_status(name)
         result = send_connection(company_id, connection_type)

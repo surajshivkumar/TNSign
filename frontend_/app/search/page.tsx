@@ -63,6 +63,38 @@ export default function Page() {
     users: [],
     companies: [],
   });
+  function capitalizeWords(str) {
+    return str
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  }
+  const handleStatusChange = async (companyId) => {
+    const updatedCompanies = searchResults.companies.map((company) => {
+      if (company.id === companyId) {
+        if (company.connectionStatus.toLowerCase() === "connected") {
+          return company;
+        } else {
+          // Change status to "pending" and send API request
+          company.connectionStatus = "pending";
+          // Make API call to update the backend
+          fetch(`http://localhost:8000/b2b/send-connection/${companyId}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${process.env.token}`,
+            },
+            body: JSON.stringify({
+              connection_type: status === "Pending" ? "PARTNER" : "OWNER", // Adjust based on logic
+            }),
+            // body: JSON.stringify({ status: "pending" }),
+          }).catch((error) => console.error("Error updating status:", error));
+        }
+      }
+      return company;
+    });
+    setSearchResults({ ...searchResults, companies: updatedCompanies });
+  };
 
   const handleInputChange = (value: string) => {
     setQuery(value);
@@ -86,9 +118,9 @@ export default function Page() {
       // In a real application, you would fetch this data from your API
       // using the query parameter
       const response = await fetch(
-        `http://localhost:8000/search?name=${query}`,
+        `http://localhost:8000/search-with-status?name=${query}`,
         {
-          method: "POST",
+          method: "GET",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${process.env.token}`,
@@ -97,6 +129,7 @@ export default function Page() {
       );
 
       const res = await response.json();
+      console.log(res);
       const data =
         res.companies.length === 0 && res.users.length === 0 ? [] : res;
       setSearchResults(data);
@@ -198,9 +231,6 @@ export default function Page() {
             )}
           </div>
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -313,6 +343,20 @@ export default function Page() {
                       <CardTitle>{company.legalName}</CardTitle>
                       <CardDescription>{company.profileName}</CardDescription>
                     </div>
+                    <button
+                      className="
+                      ml-4 px-3 py-1.5 
+                      bg-blue-600 hover:bg-blue-700 
+                      text-white font-semibold text-sm 
+                      rounded-full shadow-md 
+                      transition duration-300 ease-in-out 
+                      transform hover:scale-105
+                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
+                    "
+                      onClick={() => handleStatusChange(company.id)}
+                    >
+                      {capitalizeWords(company.connectionStatus)}
+                    </button>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
