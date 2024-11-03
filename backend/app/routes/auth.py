@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException,Query
 from app.schemas.auth_schemas import OTPRequest, OTPValidation
 from app.services.otp_service import send_otp_to_email, validate_otp
 from app.services.tnid_service import (
@@ -130,9 +130,9 @@ async def search_with_status_route(name: str):
         dict: A dictionary with lists of matching users and companies, including connection status.
     """
     try:
-
+        print(name)
         result = get_companies_with_status(name)
-
+        print("RESULT",result)
         return result
     except HTTPException as e:
         raise e
@@ -171,7 +171,9 @@ async def revoke_connection_route(request_id: str):
         dict: Message about the revocation status.
     """
     try:
-        result = revoke_connection(company_id)
+        result = revoke_connection(request_id)
         return {"message": result}
     except HTTPException as e:
         raise e
+
+    

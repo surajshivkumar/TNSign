@@ -14,60 +14,71 @@ class ConnectionType(str, Enum):
 
 def get_companies_with_status(name: str) -> dict:
     """
-    Get the connection status for each company matching the search name.
+    Get the connection status for each company and user matching the search name.
 
     Args:
-        name (str): Name to search for in companies.
+        name (str): Name to search for in companies and users.
 
     Returns:
         dict: Dictionary with users and companies (including their connection status).
     """
-    # Call the search API to get companies and users
     search_result = search_users_and_companies(name)
     companies = search_result["companies"]
     users = search_result["users"]
 
-    # users = search_result.get("users", [])
+    companies_with_status = [
+        {**company, "connectionStatus": get_company_user_connection_status(company["id"], flag=0)}
+        for company in companies
+    ]
+    users_with_status = [
+        {**user, "connectionStatus": get_company_user_connection_status(user["id"], flag=1)}
+        for user in users
+    ]
 
-    # For each company, check the connection status
-    companies_with_status = []
-    for company in companies:
-        company_id = company["id"]
-        connection_status = get_company_connection_status(company_id)
-        companies_with_status.append({**company, "connectionStatus": connection_status})
-
-    return {"companies": companies_with_status}
+    return {"companies": companies_with_status, "users": users_with_status}
 
 
-def get_company_connection_status(company_id: str) -> list:
+def get_company_user_connection_status(entity_id: str, flag: int) -> str:
     """
-    Check the connection status for a company based on its ID.
+    Check the connection status for a company or user based on its ID.
 
     Args:
-        company_id (str): The ID of the company to check.
+        entity_id (str): The ID of the company or user to check.
+        flag (int): 0 for companies (B2B), 1 for users (B2C).
 
     Returns:
         str: The connection status ('pending', 'connected', 'not_connected').
     """
-    query = """
-    query PendingB2bConnectionRequests($companyId: ID!) {
-        pendingB2bConnectionRequests(invitedCompanyId: $companyId) {
-            status
-            id
-        }
-        b2bConnections {
-           company{
-           id
-           }
-            connectedCompany {
+    if flag == 0:  # B2B connection
+        query = """
+        query CheckB2BConnection($companyId: ID!) {
+            pendingB2bConnectionRequests(invitedCompanyId: $companyId) {
+                status
                 id
             }
+            b2bConnections {
+                connectedCompany {
+                    id
+                }
+            }
         }
-    }
-    """
-    variables = {"companyId": company_id}
-    statuses = get_companies_with_status(company_id)
-    print(statuses)
+        """
+        variables = {"companyId": entity_id}
+    else:  # B2C connection
+        query = """
+        query CheckB2CConnection($userId: ID!) {
+            pendingB2cConnectionRequests(invitedUserId: $userId) {
+                status
+                id
+            }
+            b2cConnections {
+                connectedUser {
+                    id
+                }
+            }
+        }
+        """
+        variables = {"userId": entity_id}
 
     try:
         response = requests.post(
@@ -80,64 +91,66 @@ def get_company_connection_status(company_id: str) -> list:
         )
         response.raise_for_status()
         response_data = response.json()
-        print(response_data)
 
-        # Check for pending connection requests
         pending_requests = response_data.get("data", {}).get(
-            "pendingB2bConnectionRequests", []
+            "pendingB2bConnectionRequests" if flag == 0 else "pendingB2cConnectionRequests", []
         )
-        print(pending_requests)
+        active_connections = response_data.get("data", {}).get(
+            "b2bConnections" if flag == 0 else "b2cConnections", []
+        )
+
         if pending_requests:
             return "pending"
-
-        # Check if a connection already exists
-        active_connections = response_data.get("data", {}).get("b2bConnections", [])
         for connection in active_connections:
-            if connection.get("connectedCompany", {}).get("id") == company_id:
+            connected_id = connection.get("connectedCompany" if flag == 0 else "connectedUser", {}).get("id")
+            if connected_id == entity_id:
                 return "connected"
-
-        # If no pending or active connections are found, return 'not_connected'
-        return "not connected"
+        return "not_connected"
 
     except requests.exceptions.RequestException as e:
         raise HTTPException(
-            status_code=500, detail=f"Error checking company connection status: {e}"
+            status_code=500, detail=f"Error checking connection status: {e}"
         )
 
 
-def send_connection(company_id: str, connection_type: ConnectionType) -> str:
+def send_connection(entity_id: str, connection_type: ConnectionType, entity_type: str) -> str:
     """
-    Send a connection request to a company with a specified connection type
-    if not already connected or pending.
+    Send a connection request to a company (B2B) or user (B2C) with a specified connection type.
 
     Args:
-        company_id (str): The ID of the company to connect with.
+        entity_id (str): The ID of the company or user to connect with.
         connection_type (ConnectionType): The type of connection to create.
+        entity_type (str): Type of entity, either 'company' for B2B or 'user' for B2C.
 
     Returns:
         str: The ID of the connection request if created, otherwise an error message.
     """
-    # Check current connection status
-    status = get_company_connection_status(company_id)
-    print(status)
+    flag = 0 if entity_type == "company" else 1
+    status = get_company_user_connection_status(entity_id, flag)
+    
     if status == "connected":
         return "Already connected. Use revoke connection to disconnect."
     elif status == "pending":
         return "Connection request is already pending. Cannot send a new request."
 
-    # Send connection request with the specified connection_type
-    mutation = (
+    if entity_type == "company":
+        mutation = f"""
+        mutation CreateB2bConnectionRequest($invitedCompanyId: ID!) {{
+            createB2bConnectionRequest(connectionType: {connection_type.value}, invitedCompanyId: $invitedCompanyId) {{
+                id
+            }}
+        }}
         """
-    mutation CreateB2bConnectionRequest($invitedCompanyId: ID!) {
-        createB2bConnectionRequest(connectionType: %s, invitedCompanyId: $invitedCompanyId) {
-            id
-        }
-    }
-    """
-        % connection_type.value
-    )  # Pass the enum as an unquoted value
-
-    variables = {"invitedCompanyId": company_id}
+        variables = {"invitedCompanyId": entity_id}
+    else:
+        mutation = f"""
+        mutation CreateB2cConnectionRequest($invitedUserId: ID!) {{
+            createB2cConnectionRequest(connectionType: {connection_type.value}, invitedUserId: $invitedUserId) {{
+                id
+            }}
+        }}
+        """
+        variables = {"invitedUserId": entity_id}
 
     try:
         response = requests.post(
@@ -151,18 +164,13 @@ def send_connection(company_id: str, connection_type: ConnectionType) -> str:
         response.raise_for_status()
         response_data = response.json()
 
-        # Extract the connection ID
-        connection_id = (
-            response_data.get("data", {})
-            .get("createB2bConnectionRequest", {})
-            .get("id")
-        )
+        connection_id = response_data.get("data", {}).get(
+            "createB2bConnectionRequest" if entity_type == "company" else "createB2cConnectionRequest", {}
+        ).get("id")
         if not connection_id:
-            raise HTTPException(
-                status_code=400, detail="Error creating connection request"
-            )
+            raise HTTPException(status_code=400, detail="Error creating connection request")
 
-        return connection_id  # Return the request ID for revocation purposes
+        return connection_id
 
     except requests.exceptions.RequestException as e:
         raise HTTPException(
@@ -170,19 +178,26 @@ def send_connection(company_id: str, connection_type: ConnectionType) -> str:
         )
 
 
-def revoke_connection(request_id: str) -> str:
+def revoke_connection(request_id: str, entity_type: str) -> str:
     """
     Revoke a connection request using the unique request ID.
 
     Args:
         request_id (str): The unique ID of the connection request to revoke.
+        entity_type (str): Type of entity, either 'company' for B2B or 'user' for B2C.
 
     Returns:
         str: Success message or error message.
     """
     mutation = """
-    mutation RevokeB2bConnectionRequest($requestId: ID!) {
-        revokeB2bConnectionRequest(requestId: $requestId) {
+    mutation RevokeConnectionRequest($requestId: ID!) {
+        revokeConnectionRequest(requestId: $requestId) {
+            id
+        }
+    }
+    """ if entity_type == "company" else """
+    mutation RevokeB2cConnectionRequest($requestId: ID!) {
+        revokeB2cConnectionRequest(requestId: $requestId) {
             id
         }
     }
@@ -201,7 +216,6 @@ def revoke_connection(request_id: str) -> str:
         response.raise_for_status()
         response_data = response.json()
 
-        # Check for errors in the mutation response
         if "errors" in response_data:
             raise HTTPException(
                 status_code=400, detail="Error revoking connection request"
