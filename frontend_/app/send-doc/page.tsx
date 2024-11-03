@@ -22,7 +22,10 @@ export default function DocumentViewer() {
   const [isSent, setIsSent] = useState(false);
 
   // Simulated document pages (in a real app, these would be your actual document pages)
-  const pages = ["/PAYMENT_RECEIPT_1622518462-images-0.jpg"];
+  const pages = [
+    "/PAYMENT_RECEIPT_1622518462-images-0.jpg",
+    "/PAYMENT_RECEIPT_1622518462-images-0.jpg",
+  ];
 
   const addSignatureBox = () => {
     const newBox = {

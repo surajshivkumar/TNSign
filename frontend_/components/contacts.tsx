@@ -10,8 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/app/components/ui-signature/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/app/components/ui-search/avatar";
+import { Badge } from "@/app/components/ui-search/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Company {
