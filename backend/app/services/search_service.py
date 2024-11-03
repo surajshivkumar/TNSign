@@ -16,29 +16,30 @@ def search_users_and_companies(name: str) -> dict:
     """
     # Define GraphQL query for users and companies
     query = """
-    query Users($name: String!) {
-        users(name: $name) {
-            aboutMe
-            birthdate
-            firstName
-            id
-            lastName
-            metadata
-            middleName
-            username
-        }
-        companies(name: $name ) {
-            aboutUs
-            brandName
-            id
-            legalName
-            metadata
-            profileName
-            taxId
-            yearFounded
-        }
+query Users($name: String!) {
+    users(name: $name) {
+        aboutMe
+        birthdate
+        firstName
+        id
+        lastName
+        metadata
+        middleName
+        username
     }
-    """
+    companies(name: $name) {
+        aboutUs
+        brandName
+        id
+        legalName
+        metadata
+        profileName
+        taxId
+        yearFounded
+    }
+}
+"""
+
     variables = {"name": name}
 
     try:
@@ -58,6 +59,7 @@ def search_users_and_companies(name: str) -> dict:
 
         # Parse JSON response
         response_data = response.json()
+        print(response_data['data'])
 
         # Check if the expected data exists in the response
         if "data" not in response_data:

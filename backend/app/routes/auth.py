@@ -112,7 +112,7 @@ def search_entities(name:str):
     except Exception as e:
         raise HTTPException(status_code=500, detail="An unexpected error occurred")
     
-@router.get("/search-with-status")
+@router.post("/search-with-status")
 async def search_with_status_route(name: str):
     """
     Route to search for users and companies by name and include connection status for each company.
@@ -125,6 +125,7 @@ async def search_with_status_route(name: str):
     """
     try:
         result = get_companies_with_status(name)
+        print(result)
         return result
     except HTTPException as e:
         raise e
@@ -149,13 +150,13 @@ async def send_connection_route(company_id: str, connection_type: ConnectionType
         raise e
 
 
-@router.post("/b2b/revoke-connection/{company_id}")
-async def revoke_connection_route(company_id: str):
+@router.post("/b2b/revoke-connection/{request_id}")
+async def revoke_connection_route(request_id: str):
     """
     Endpoint to revoke a B2B connection.
     
     Args:
-        company_id (str): The ID of the company to disconnect from.
+        request_id (str): The ID of the company to disconnect from.
         
     Returns:
         dict: Message about the revocation status.

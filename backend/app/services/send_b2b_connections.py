@@ -22,7 +22,6 @@ def get_companies_with_status(name: str) -> dict:
     # Call the search API to get companies and users
     search_result = search_users_and_companies(name)
     companies = search_result["data"]["companies"]
-    print(companies)
     #users = search_result.get("users", [])
 
     # For each company, check the connection status
@@ -83,7 +82,7 @@ def get_company_connection_status(company_id: str) -> list:
         print(response_data)
 
         # Check for pending connection requests
-        pending_requests = response_data.get("data", {}).get("pendingB2bConnectionRequests", [])
+        pending_requests = response_data.get("companies", {}).get("pendingB2bConnectionRequests", [])
         print(pending_requests)
         if pending_requests:
             return "pending"
