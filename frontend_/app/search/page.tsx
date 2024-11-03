@@ -186,7 +186,7 @@ export default function Page() {
             </li>
             <li>
               <Link
-                href="#"
+                href="/contacts"
                 className="flex items-center p-2 rounded-lg hover:bg-gray-700 transition-colors"
               >
                 <Users className="h-5 w-5 mr-3" />
@@ -301,6 +301,26 @@ export default function Page() {
                       </CardTitle>
                       <CardDescription>{user.username}</CardDescription>
                     </div>
+                    <button
+                      className={`
+                      ml-4 px-3 py-1.5 
+                      text-white font-semibold text-sm 
+                      rounded-full shadow-md 
+                      transition duration-300 ease-in-out 
+                      transform hover:scale-105
+                      focus:outline-none focus:ring-2 focus:ring-opacity-50
+                      ${
+                        user.connectionStatus === "connected"
+                          ? "bg-green-500 focus:ring-green-500"
+                          : user.connectionStatus === "pending"
+                          ? "bg-yellow-500 focus:ring-yellow-500"
+                          : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+                      }
+                    `}
+                      onClick={() => handleStatusChange(user.id)}
+                    >
+                      {capitalizeWords(user.connectionStatus)}
+                    </button>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
@@ -344,15 +364,21 @@ export default function Page() {
                       <CardDescription>{company.profileName}</CardDescription>
                     </div>
                     <button
-                      className="
-                      ml-4 px-3 py-1.5 
-                      bg-blue-600 hover:bg-blue-700 
-                      text-white font-semibold text-sm 
-                      rounded-full shadow-md 
-                      transition duration-300 ease-in-out 
-                      transform hover:scale-105
-                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
-                    "
+                      className={`
+                        ml-4 px-3 py-1.5 
+                        text-white font-semibold text-sm 
+                        rounded-full shadow-md 
+                        transition duration-300 ease-in-out 
+                        transform hover:scale-105
+                        focus:outline-none focus:ring-2 focus:ring-opacity-50
+                        ${
+                          company.connectionStatus === "connected"
+                            ? "bg-green-500 focus:ring-green-500"
+                            : company.connectionStatus === "pending"
+                            ? "bg-yellow-500 focus:ring-yellow-500"
+                            : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+                        }
+                      `}
                       onClick={() => handleStatusChange(company.id)}
                     >
                       {capitalizeWords(company.connectionStatus)}

@@ -27,11 +27,19 @@ def get_companies_with_status(name: str) -> dict:
     users = search_result["users"]
 
     companies_with_status = [
-        {**company, "connectionStatus": get_company_user_connection_status(company["id"], flag=0)}
+        {
+            **company,
+            "connectionStatus": get_company_user_connection_status(
+                company["id"], flag=0
+            ),
+        }
         for company in companies
     ]
     users_with_status = [
-        {**user, "connectionStatus": get_company_user_connection_status(user["id"], flag=1)}
+        {
+            **user,
+            "connectionStatus": get_company_user_connection_status(user["id"], flag=1),
+        }
         for user in users
     ]
 
@@ -93,7 +101,12 @@ def get_company_user_connection_status(entity_id: str, flag: int) -> str:
         response_data = response.json()
 
         pending_requests = response_data.get("data", {}).get(
-            "pendingB2bConnectionRequests" if flag == 0 else "pendingB2cConnectionRequests", []
+            (
+                "pendingB2bConnectionRequests"
+                if flag == 0
+                else "pendingB2cConnectionRequests"
+            ),
+            [],
         )
         active_connections = response_data.get("data", {}).get(
             "b2bConnections" if flag == 0 else "b2cConnections", []
@@ -102,10 +115,12 @@ def get_company_user_connection_status(entity_id: str, flag: int) -> str:
         if pending_requests:
             return "pending"
         for connection in active_connections:
-            connected_id = connection.get("connectedCompany" if flag == 0 else "connectedUser", {}).get("id")
+            connected_id = connection.get(
+                "connectedCompany" if flag == 0 else "connectedUser", {}
+            ).get("id")
             if connected_id == entity_id:
                 return "connected"
-        return "not_connected"
+        return "not connected"
 
     except requests.exceptions.RequestException as e:
         raise HTTPException(
@@ -113,7 +128,9 @@ def get_company_user_connection_status(entity_id: str, flag: int) -> str:
         )
 
 
-def send_connection(entity_id: str, connection_type: ConnectionType, entity_type: str) -> str:
+def send_connection(
+    entity_id: str, connection_type: ConnectionType, entity_type: str
+) -> str:
     """
     Send a connection request to a company (B2B) or user (B2C) with a specified connection type.
 
@@ -127,7 +144,7 @@ def send_connection(entity_id: str, connection_type: ConnectionType, entity_type
     """
     flag = 0 if entity_type == "company" else 1
     status = get_company_user_connection_status(entity_id, flag)
-    
+
     if status == "connected":
         return "Already connected. Use revoke connection to disconnect."
     elif status == "pending":
@@ -164,11 +181,22 @@ def send_connection(entity_id: str, connection_type: ConnectionType, entity_type
         response.raise_for_status()
         response_data = response.json()
 
-        connection_id = response_data.get("data", {}).get(
-            "createB2bConnectionRequest" if entity_type == "company" else "createB2cConnectionRequest", {}
-        ).get("id")
+        connection_id = (
+            response_data.get("data", {})
+            .get(
+                (
+                    "createB2bConnectionRequest"
+                    if entity_type == "company"
+                    else "createB2cConnectionRequest"
+                ),
+                {},
+            )
+            .get("id")
+        )
         if not connection_id:
-            raise HTTPException(status_code=400, detail="Error creating connection request")
+            raise HTTPException(
+                status_code=400, detail="Error creating connection request"
+            )
 
         return connection_id
 
@@ -189,19 +217,23 @@ def revoke_connection(request_id: str, entity_type: str) -> str:
     Returns:
         str: Success message or error message.
     """
-    mutation = """
+    mutation = (
+        """
     mutation RevokeConnectionRequest($requestId: ID!) {
         revokeConnectionRequest(requestId: $requestId) {
             id
         }
     }
-    """ if entity_type == "company" else """
+    """
+        if entity_type == "company"
+        else """
     mutation RevokeB2cConnectionRequest($requestId: ID!) {
         revokeB2cConnectionRequest(requestId: $requestId) {
             id
         }
     }
     """
+    )
     variables = {"requestId": request_id}
 
     try:
