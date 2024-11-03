@@ -3,7 +3,6 @@ import requests
 from app.config import TNID_API_SEARCH_URL, TNID_API_BEARER_TOKEN
 
 
-
 def search_users_and_companies(name: str) -> dict:
     """
     Search for users and companies based on a name.
@@ -42,7 +41,6 @@ def search_users_and_companies(name: str) -> dict:
     variables = {"name": name}
 
     try:
-        print(name)
         # Send the GraphQL request to the TNID API
         response = requests.post(
             TNID_API_SEARCH_URL,
@@ -58,7 +56,7 @@ def search_users_and_companies(name: str) -> dict:
 
         # Parse JSON response
         response_data = response.json()
-
+        print(response_data)
         # Check if the expected data exists in the response
         if "data" not in response_data:
             raise HTTPException(
