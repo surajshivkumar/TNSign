@@ -10,8 +10,21 @@ import {
   RadioGroupItem,
 } from "@/app/components/ui-login/radio-group";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+interface OTPRequestData {
+  email?: string;
+  phone?: string;
+}
+
+interface OTPValidationData {
+  email?: string;
+  phone?: string;
+  otp: string;
+}
 
 export function LoginPageComponent() {
+  const router = useRouter();
   const [loginMethod, setLoginMethod] = useState<"phone" | "email">("phone");
   const [phoneOrEmail, setPhoneOrEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -22,20 +35,83 @@ export function LoginPageComponent() {
     e.preventDefault();
     setIsLoading(true);
 
-    if (step === 1) {
-      // TODO: Implement API call to send OTP
-      console.log(`Sending OTP to ${loginMethod}: ${phoneOrEmail}`);
-      setTimeout(() => {
+    try {
+      if (step === 1) {
+        // Prepare request data based on login method
+        const requestData: OTPRequestData = {};
+        if (loginMethod === "email") {
+          requestData.email = phoneOrEmail;
+        } else {
+          requestData.phone = phoneOrEmail;
+        }
+        console.log(process.env.token);
+
+        const response = await fetch("http://localhost:8000/sendotp", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.token}`,
+          },
+          body: JSON.stringify(requestData),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "Failed to send OTP");
+        }
+
+        // Check if response indicates TNID redirect is needed
+        if (data.redirect_url) {
+          // Handle TNID case - you might want to redirect the user
+          window.location.href = data.redirect_url;
+          return;
+        }
+
+        // Success case - OTP sent
+        alert(data.message); // Shows "OTP sent to example@email.com"
         setStep(2);
-        setIsLoading(false);
-      }, 1000);
-    } else {
-      // TODO: Implement API call to verify OTP
-      console.log(`Verifying OTP: ${otp}`);
-      setTimeout(() => {
-        alert("Login successful!");
-        setIsLoading(false);
-      }, 1000);
+      } else {
+        // Prepare validation data
+        const validationData: OTPValidationData = {
+          otp: otp,
+        };
+
+        if (loginMethod === "email") {
+          validationData.email = phoneOrEmail;
+        } else {
+          validationData.phone = phoneOrEmail;
+        }
+
+        const response = await fetch("http://localhost:8000/auth", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.token}`,
+          },
+          body: JSON.stringify(validationData),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "Failed to validate OTP");
+        }
+
+        // Success case - OTP validated
+        alert(data.message);
+        // Redirect to new page
+        router.push("/dashboard"); // Replace '/dashboard' with your desired route
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("An unexpected error occurred");
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
